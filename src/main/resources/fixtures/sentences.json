@@ -1,0 +1,114 @@
+{
+  "format": 1,
+  "sentences": [
+    {
+      "key": "S1",
+      "text": "语言学团队会对同一句子多轮修订",
+      "versions": [
+        {
+          "side": "L",
+          "label": "共同基线 V0（细分词）",
+          "tokens": [
+            {"ord": 0, "surface": "语言", "pos": "n", "tracks": ["T_YUYAN"]},
+            {"ord": 1, "surface": "学", "pos": "v", "tracks": ["T_XUE"]},
+            {"ord": 2, "surface": "团队", "pos": "n", "tracks": ["T_TUANDUI"]},
+            {"ord": 3, "surface": "会", "pos": "aux", "tracks": ["T_HUI"]},
+            {"ord": 4, "surface": "对", "pos": "p", "tracks": ["T_DUI"]},
+            {"ord": 5, "surface": "同一", "pos": "adj", "tracks": ["T_TONGYI"]},
+            {"ord": 6, "surface": "句", "pos": "n", "tracks": ["T_JU"]},
+            {"ord": 7, "surface": "子", "pos": "suf", "tracks": ["T_ZI"]},
+            {"ord": 8, "surface": "做", "pos": "v", "tracks": ["T_ZUO"]},
+            {"ord": 9, "surface": "多轮", "pos": "adj", "tracks": ["T_DUOLUN"]},
+            {"ord": 10, "surface": "修订", "pos": "n", "tracks": ["T_XIUDING"]}
+          ],
+          "arcs": [
+            {"dep": 0, "head": 1, "relation": "mod"},
+            {"dep": 1, "head": 2, "relation": "compound"},
+            {"dep": 2, "head": 8, "relation": "nsubj"},
+            {"dep": 3, "head": 8, "relation": "aux"},
+            {"dep": 4, "head": 7, "relation": "case"},
+            {"dep": 5, "head": 8, "relation": "refdet"},
+            {"dep": 6, "head": 7, "relation": "mark:rel"},
+            {"dep": 7, "head": 8, "relation": "obj"},
+            {"dep": 9, "head": 10, "relation": "amod"},
+            {"dep": 10, "head": 8, "relation": "obj:v"}
+          ],
+          "spans": [
+            {"label": "NP 语言学团队", "segments": [[0, 2]]},
+            {"label": "NP 同一句子", "segments": [[5, 7]]},
+            {"label": "VP 对…做多轮修订", "segments": [[4, 4], [8, 10]]}
+          ]
+        },
+        {
+          "side": "A",
+          "label": "甲版 V1（合词 + 空节点 e）",
+          "tokens": [
+            {"ord": 0, "surface": "语言学", "pos": "n", "tracks": ["T_YUYAN", "T_XUE"]},
+            {"ord": 1, "surface": "团队", "pos": "n", "tracks": ["T_TUANDUI"]},
+            {"ord": 2, "surface": "会", "pos": "aux", "tracks": ["T_HUI"]},
+            {"ord": 3, "surface": "对", "pos": "p", "tracks": ["T_DUI"]},
+            {"ord": 4, "surface": "同一", "pos": "adj", "tracks": ["T_TONGYI"]},
+            {"ord": 5, "surface": "句子", "pos": "n", "tracks": ["T_JU", "T_ZI"]},
+            {"ord": 6, "surface": "∅", "pos": "e", "empty": true, "lemma": "trace", "tracks": ["T_EMPTY"]},
+            {"ord": 7, "surface": "做", "pos": "v", "tracks": ["T_ZUO"]},
+            {"ord": 8, "surface": "多轮", "pos": "adj", "tracks": ["T_DUOLUN"]},
+            {"ord": 9, "surface": "修订", "pos": "n", "tracks": ["T_XIUDING"]}
+          ],
+          "arcs": [
+            {"dep": 0, "head": 1, "relation": "compound:lang"},
+            {"dep": 1, "head": 7, "relation": "nsubj"},
+            {"dep": 2, "head": 7, "relation": "aux"},
+            {"dep": 3, "head": 5, "relation": "case"},
+            {"dep": 4, "head": 7, "relation": "ref"},
+            {"dep": 5, "head": 7, "relation": "obj"},
+            {"dep": 6, "head": 5, "relation": "refdet"},
+            {"dep": 8, "head": 9, "relation": "amod"},
+            {"dep": 9, "head": 7, "relation": "obj:v"}
+          ],
+          "spans": [
+            {"label": "NP 语言学团队", "segments": [[0, 1]]},
+            {"label": "NP 同一∅句子", "segments": [[4, 6]]},
+            {"label": "VP 对句子做…修订", "segments": [[3, 5], [7, 9]]}
+          ]
+        },
+        {
+          "side": "B",
+          "label": "乙版 V2（保留拆词 + 空节点 e）",
+          "tokens": [
+            {"ord": 0, "surface": "语言", "pos": "n", "tracks": ["T_YUYAN"]},
+            {"ord": 1, "surface": "学", "pos": "v", "tracks": ["T_XUE"]},
+            {"ord": 2, "surface": "团队", "pos": "n", "tracks": ["T_TUANDUI"]},
+            {"ord": 3, "surface": "会", "pos": "aux", "tracks": ["T_HUI"]},
+            {"ord": 4, "surface": "对", "pos": "p", "tracks": ["T_DUI"]},
+            {"ord": 5, "surface": "同一", "pos": "det", "tracks": ["T_TONGYI"]},
+            {"ord": 6, "surface": "句", "pos": "n", "tracks": ["T_JU"]},
+            {"ord": 7, "surface": "子", "pos": "suf", "tracks": ["T_ZI"]},
+            {"ord": 8, "surface": "∅", "pos": "e", "empty": true, "lemma": "trace", "tracks": ["T_EMPTY"]},
+            {"ord": 9, "surface": "做", "pos": "v", "tracks": ["T_ZUO"]},
+            {"ord": 10, "surface": "多轮", "pos": "adj", "tracks": ["T_DUOLUN"]},
+            {"ord": 11, "surface": "修订", "pos": "n", "tracks": ["T_XIUDING"]}
+          ],
+          "arcs": [
+            {"dep": 0, "head": 1, "relation": "mod"},
+            {"dep": 1, "head": 9, "relation": "nsubj"},
+            {"dep": 2, "head": 1, "relation": "nsubj:lang"},
+            {"dep": 3, "head": 9, "relation": "aux"},
+            {"dep": 4, "head": 7, "relation": "case"},
+            {"dep": 5, "head": 6, "relation": "det"},
+            {"dep": 6, "head": 7, "relation": "mark:rel"},
+            {"dep": 7, "head": 9, "relation": "obj"},
+            {"dep": 8, "head": 6, "relation": "ref"},
+            {"dep": 10, "head": 11, "relation": "amod"},
+            {"dep": 11, "head": 9, "relation": "obj:v"}
+          ],
+          "spans": [
+            {"label": "NP 语言学团队", "segments": [[0, 2]]},
+            {"label": "NP 同一句子∅", "segments": [[5, 8]]},
+            {"label": "VP 对句子∅…做…修订", "segments": [[4, 7], [9, 11]]}
+          ]
+        }
+      ],
+      "genealogy": []
+    }
+  ]
+}
