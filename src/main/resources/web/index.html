@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>句轨裁决所</title>
+<style>
+  :root { --a:#2b6cb0; --b:#c05621; --bg:#f7fafc; --ink:#1a202c; --warn:#c53030; --ok:#2f855a; --muted:#718096; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:#1a365d; color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  header .meta { font-size:12px; opacity:.85; }
+  main { padding:16px 20px; max-width:1280px; margin:0 auto; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  select, button, input { font: inherit; padding:5px 10px; border:1px solid #cbd5e0; border-radius:6px; background:#fff; }
+  button { cursor:pointer; }
+  button.primary { background:#2b6cb0; color:#fff; border-color:#2b6cb0; }
+  button.warn { background:#c53030; color:#fff; border-color:#c53030; }
+  button.ghost { background:#edf2f7; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .panel { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:12px; }
+  .panel h3 { margin:0 0 8px; font-size:14px; }
+  .side-a { border-top:3px solid var(--a); }
+  .side-b { border-top:3px solid var(--b); }
+  .tokens { display:flex; flex-wrap:wrap; gap:4px; margin:8px 0; }
+  .tok { border:1px solid #cbd5e0; border-radius:6px; padding:3px 6px; font-size:13px; background:#fff; position:relative; }
+  .tok.empty { border-style:dashed; color:var(--warn); background:#fff5f5; }
+  .tok .pos { font-size:10px; color:var(--muted); display:block; }
+  .cons { margin:4px 0; font-size:12px; }
+  .cons .seg { display:inline-block; border:1px solid #805ad5; background:#faf5ff; border-radius:4px; padding:1px 5px; margin:2px 3px 2px 0; }
+  .gap { color:var(--muted); padding:0 2px; }
+  svg.arcs { width:100%; height:90px; display:block; }
+  .arc-a { stroke:var(--a); } .arc-b { stroke:var(--b); }
+  .edge { stroke-width:1.6; fill:none; }
+  .edgelabel { font-size:9px; fill:#4a5568; }
+  .items { margin-top:14px; }
+  .item { border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; margin:8px 0; background:#fff; }
+  .item.conflict { border-color:var(--warn); background:#fff5f5; }
+  .item .desc { font-size:13px; }
+  .item .tag { font-size:11px; padding:1px 6px; border-radius:10px; margin-right:6px; }
+  .tag.gran { background:#fefcbf; } .tag.attr { background:#e9d8fd; }
+  .tag.edge { background:#bee3f8; } .tag.con { background:#c6f6d5; }
+  .tag.pending { background:#fed7d7; color:var(--warn); }
+  .tag.resolved { background:#c6f6d5; color:var(--ok); }
+  .replay { border-left:4px solid var(--warn); background:#fff5f5; padding:8px 10px; margin:6px 0; border-radius:0 6px 6px 0; font-size:13px; }
+  .muted { color:var(--muted); font-size:12px; }
+  .badge { font-size:11px; padding:1px 7px; border-radius:10px; }
+  .badge.err { background:#fed7d7; color:var(--warn); } .badge.ok { background:#c6f6d5; color:var(--ok); }
+  .badge.info { background:#bee3f8; color:#2b6cb0; }
+  details { margin-top:6px; }
+  summary { cursor:pointer; font-size:12px; color:var(--a); }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  th,td { border-bottom:1px solid #edf2f7; text-align:left; padding:3px 6px; }
+  .log { font-family:ui-monospace,monospace; font-size:11px; max-height:200px; overflow:auto; background:#1a202c; color:#a0aec0; padding:8px; border-radius:6px; }
+  #toast { position:fixed; bottom:20px; right:20px; background:#1a202c; color:#fff; padding:10px 16px; border-radius:8px; font-size:13px; display:none; max-width:420px; }
+  .basis-edit { background:#fffff0; border:1px dashed #d69e2e; }
+  .unmatched { font-size:12px; color:var(--warn); margin:4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>句轨裁决所</h1>
+  <span class="meta">token 谱系对齐 · 拆词/合词/空节点 · 决策只追加不覆盖</span>
+  <div style="flex:1"></div>
+  <label class="meta">操作者
+    <input id="operator" value="甲" size="6" style="margin-left:6px">
+  </label>
+  <button class="ghost" onclick="exportData()">导出运行记录</button>
+  <label class="ghost" style="padding:5px 10px;border:1px solid #cbd5e0;border-radius:6px;cursor:pointer">
+    导入复核<input type="file" id="importFile" accept="application/json" style="display:none">
+  </label>
+  <button class="warn" onclick="resetAll()">清库重灌 fixture</button>
+</header>
+<main>
+  <div class="toolbar">
+    <label>句子
+      <select id="sentenceSel" onchange="loadSessions()"></select>
+    </label>
+    <label>会话（两个分析版本）
+      <select id="sessionSel" onchange="loadSession()"></select>
+    </label>
+    <span id="basisBadge" class="badge info">basis r0</span>
+    <span id="validBadge"></span>
+    <div style="flex:1"></div>
+    <button class="ghost" onclick="toggleBasisEdit()" id="basisBtn">修订对齐基础</button>
+    <button class="primary" onclick="doMerge()">执行合并 → 新版本</button>
+  </div>
+  <div id="replayPanel"></div>
+  <div class="grid">
+    <div class="panel side-a"><h3 id="leftTitle">版本 A</h3><div id="leftView"></div></div>
+    <div class="panel side-b"><h3 id="rightTitle">版本 B</h3><div id="rightView"></div></div>
+  </div>
+  <div class="panel items" style="margin-top:14px">
+    <h3>待决项（对齐组 / 依存弧 / 成分）</h3>
+    <div id="unmatchedPanel"></div>
+    <div id="itemsPanel"></div>
+  </div>
+  <div class="grid" style="margin-top:14px">
+    <div class="panel"><h3>决策日志（只追加）</h3><div id="decisionLog" class="log"></div></div>
+    <div class="panel"><h3>系统运行日志 / 合并记录</h3>
+      <div id="runsPanel" class="muted"></div>
+      <div id="eventLog" class="log" style="margin-top:6px"></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h3>合并产物 provenance 反查</h3><div id="provPanel" class="muted">先执行一次合并，然后选择新版本查看来源。</div></div>
+</main>
+<div id="toast"></div>
+<script>
+let STATE = null, SESSIONS = [], SENTENCES = [], basisMode = false, localBasis = 0;
+const $ = id => document.getElementById(id);
+function toast(msg, bad){ const t=$('toast'); t.textContent=msg; t.style.background=bad?'#c53030':'#1a202c'; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',4000); }
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  const txt = await r.text();
+  let body = {}; try { body = txt ? JSON.parse(txt) : {}; } catch(e){ body = {raw:txt}; }
+  if(!r.ok){ throw Object.assign(new Error(body.message||r.statusText), {status:r.status, body}); }
+  return body;
+}
+async function boot(){
+  const s = await api('/api/state');
+  SENTENCES = s.sentences; SESSIONS = s.sessions;
+  $('sentenceSel').innerHTML = SENTENCES.map(x=>`<option value="${x.id}">${x.id}：${x.surface}</option>`).join('');
+  loadSessions();
+  $('importFile').addEventListener('change', importData);
+}
+function loadSessions(){
+  const sid = $('sentenceSel').value;
+  const list = SESSIONS.filter(x=>x.sentenceId===sid);
+  $('sessionSel').innerHTML = list.map(x=>`<option value="${x.id}">${x.id} （${x.leftVersionId} ↔ ${x.rightVersionId}）</option>`).join('');
+  loadSession();
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function tokMap(view){ const m={}; view.tokens.forEach(t=>m[t.id]=t); return m; }
+function renderSide(view, side){
+  const tm = tokMap(view);
+  const maxOrd = Math.max(...view.tokens.map(t=>t.ord));
+  const byOrd = {}; view.tokens.forEach(t=>byOrd[t.ord]=t);
+  const tokenHtml = view.tokens.map(t=>
+    `<div class="tok ${t.empty?'empty':''}" data-tid="${t.id}">${t.empty?'∅':esc(t.text)}<span class="pos">${esc(t.pos)}${t.lemma!==t.text?' · '+esc(t.lemma):''}</span></div>`
+  ).join('');
+  // arcs svg with ordinal positions
+  const n = view.tokens.length;
+  const wPct = 100/Math.max(n,1);
+  const pos = id => id==null ? null : (tm[id]?tm[id].ord-1:0);
+  const arcs = view.deps.map((d,i)=>{
+    const h = d.headId==null ? 0 : pos(d.headId); const q = pos(d.depId);
+    if(q==null) return '';
+    const x2=(q+0.5)*wPct; const x1=d.headId==null?x2:(h+0.5)*wPct;
+    const top = d.headId==null ? 8 : 18 + (i%4)*14;
+    const y2=80, y1=top;
+    const mx=(x1+x2)/2;
+    return `<path class="edge ${side==='A'?'arc-a':'arc-b'}" d="M ${x1} ${y1} Q ${mx} ${top-12} ${x2} ${y2}"/>
+      <text class="edgelabel" x="${mx}" y="${top-2}">${esc(d.relation)}</text>`;
+  }).join('');
+  const conHtml = view.constituents.map(c=>{
+    const segs = c.parts.map(part=>`<span class="seg">${part.map(id=>tm[id]?(tm[id].empty?'∅':esc(tm[id].text)):'?').join(' ')}</span>`).join('<span class="gap">…</span>');
+    return `<div class="cons"><b>[${esc(c.label)}]</b> ${segs} ${c.parts.length>1?'<span class="muted">不连续</span>':''}</div>`;
+  }).join('');
+  const vBadges = view.validation.map(f=>`<span class="badge ${f.severity==='ERROR'?'err':'info'}">${f.code}：${esc(f.message)}</span> `).join('');
+  return `<div class="tokens" id="toks-${side}">${tokenHtml}</div>
+    <svg class="arcs" viewBox="0 0 100 90" preserveAspectRatio="none">${arcs}</svg>
+    <div>${conHtml}</div>
+    <div style="margin-top:6px">${vBadges||'<span class="badge ok">校验通过</span>'}</div>`;
+}
+async function loadSession(){
+  const id = $('sessionSel').value; if(!id) return;
+  STATE = await api(`/api/session/${id}`);
+  localBasis = STATE.basisRevision;
+  $('basisBadge').textContent = `basis r${STATE.basisRevision}`;
+  $('basisBadge').className = 'badge ' + (STATE.basisRevision>0?'err':'info');
+  $('leftTitle').textContent = `版本 A：${STATE.left.version.label}（${STATE.left.version.id}）`;
+  $('rightTitle').textContent = `版本 B：${STATE.right.version.label}（${STATE.right.version.id}）`;
+  $('leftView').innerHTML = renderSide(STATE.left,'A');
+  $('rightView').innerHTML = renderSide(STATE.right,'B');
+  renderReplay(); renderItems(); renderLogs(); renderRuns(); renderUnmatched(); markLinks();
+}
+function markLinks(){
+  // 给参与同一 group 的 token 加描边色（简单提示）
+  STATE.groups.forEach((g,i)=>{
+            [...g.left,...g.right].forEach(tid=>{
+        const el=document.querySelector(`[data-tid="${CSS.escape(tid)}"]`);
+        if(el){ el.style.outline='2px solid rgba(66,153,225,.5)'; el.style.outlineOffset='0'; }
+      });
+  });
+}
+function renderUnmatched(){
+  const lo = STATE.leftOnlyTokens, ro = STATE.rightOnlyTokens;
+  const nm = id => { const t=STATE.left.tokens.concat(STATE.right.tokens).find(x=>x.id===id); return t?`${t.empty?'∅':t.text}(${id})`:id; };
+  const linksHtml = STATE.links.map(l=>
+    `<div class="muted" style="margin:2px 0">${l.source==='seed'?'种子':'人工'}: ${esc(nm(l.leftTokenId))} ↔ ${esc(nm(l.rightTokenId))}
+      ${basisMode?`<button class="warn" style="padding:0 6px;font-size:11px" onclick="removeLink(${l.id})">删链</button>`:''}</div>`
+  ).join('');
+  $('unmatchedPanel').innerHTML =
+    `<div class="unmatched">未对应（保持不确定）：A侧 ${(lo.map(nm).join('、')||'无')} ｜ B侧 ${(ro.map(nm).join('、')||'无')}</div>
+     <details ${basisMode?'open':''}><summary>谱系链接（${STATE.links.length}）${basisMode?' — 可删除以修订基础':''}</summary>${linksHtml}</details>`;
+}
+function effFor(sig){ return (STATE.groupItems.concat([]).map(x=>x)).length, STATE._eff && STATE._eff[sig]; }
+function findEff(sig){
+  for(const arr of [STATE.groupItems, STATE.edgeItems, STATE.constituentItems]){
+    const it=arr.find(x=>x.signature===sig); if(it && it.effective) return it.effective;
+  }
+  return null;
+}
+function itemTag(kind){
+  return {GRANULARITY:'<span class="tag gran">拆合</span>', ATTR:'<span class="tag attr">属性</span>',
+    EDGE:'<span class="tag edge">依存弧</span>', CONSTITUENT:'<span class="tag con">成分</span>'}[kind]||'';
+}
+function choiceButtons(sig, kind){
+  const eff = findEff(sig);
+  const cur = eff ? eff.choice : '';
+  const isGran = kind==='GRANULARITY';
+  const btn=(ch,label)=>`<button class="${cur===ch?'primary':''}" onclick="decide('${sig}','${ch}')">${label}</button>`;
+  let html='';
+  if(isGran){
+    html += btn('USE_A','按 A 侧粒度') + btn('USE_B','按 B 侧粒度') + btn('CONFIRM','确认 1:1/连写');
+  } else if(kind==='ATTR'){
+    html += btn('KEEP_A','取 A 属性') + btn('KEEP_B','取 B 属性');
+  } else {
+    html += btn('KEEP_A','选 A 侧') + btn('KEEP_B','选 B 侧') + btn('CONFIRM','确认一致');
+  }
+  html += btn('PENDING','保留待决');
+  return html;
+}
+function renderItems(){
+  const rows=[];
+  STATE.groupItems.forEach(it=>{
+    const eff=it.effective;
+    const diffs = (it.attrDiffs||[]).map(d=>`<span class="muted">${esc(d.attr)}: ${esc(d.left)} ↔ ${esc(d.right)}</span>`).join('；');
+    rows.push({sig:it.signature, kind:it.kind,
+      html:`${itemTag(it.kind)}<span class="desc">${esc(it.description)}</span> ${diffs?`<div>${diffs}</div>`:''}
+        <div style="margin-top:5px">${choiceButtons(it.signature,it.kind)}
+          ${eff?`<span class="badge ${eff.choice==='PENDING'?'pending':'resolved'}">当前：${eff.choice}（${esc(eff.operatorId)} #${eff.seq}）</span>`:''}
+        </div>`});
+  });
+  STATE.edgeItems.forEach(it=>{
+    const eff=it.effective;
+    rows.push({sig:it.signature, kind:'EDGE',
+      html:`${itemTag('EDGE')}<span class="desc">${esc(it.description)}</span>
+        <div class="muted">A: ${(it.leftRelations||[]).join('/')||'—'} ｜ B: ${(it.rightRelations||[]).join('/')||'—'}</div>
+        <div style="margin-top:5px">${choiceButtons(it.signature,'EDGE')}
+          ${eff?`<span class="badge ${eff.choice==='PENDING'?'pending':'resolved'}">当前：${eff.choice}（${esc(eff.operatorId)} #${eff.seq}）</span>`:''}
+        </div>`});
+  });
+  STATE.constituentItems.forEach(it=>{
+    const eff=it.effective;
+    rows.push({sig:it.signature, kind:'CONSTITUENT',
+      html:`${itemTag('CONSTITUENT')}<span class="desc">${esc(it.description)}</span>
+        <div class="muted">存在于 A: ${it.presentLeft?'是':'否'} ｜ B: ${it.presentRight?'是':'否'}</div>
+        <div style="margin-top:5px">${choiceButtons(it.signature,'CONSTITUENT')}
+          ${eff?`<span class="badge ${eff.choice==='PENDING'?'pending':'resolved'}">当前：${eff.choice}（${esc(eff.operatorId)} #${eff.seq}）</span>`:''}
+        </div>`});
+  });
+  const replaySigs = new Set(STATE.replayConflicts.map(c=>c.ref));
+  $('itemsPanel').innerHTML = rows.map(r=>
+    `<div class="item ${replaySigs.has(r.sig)?'conflict':''}">${r.html}</div>`).join('') || '<div class="muted">暂无待决项。</div>';
+}
+function renderReplay(){
+  if(!STATE.replayConflicts.length){ $('replayPanel').innerHTML=''; return; }
+  $('replayPanel').innerHTML = `<div class="panel" style="border-color:#c53030;margin-bottom:12px">
+    <h3 style="color:#c53030">重放冲突（${STATE.replayConflicts.length}）—— 旧决定未被覆盖，需人工重放裁决</h3>
+    ${STATE.replayConflicts.map(c=>`<div class="replay">
+      <b>#${c.seq} ${esc(c.operatorId)}</b> 曾在 basis r${c.atBasis} 对「${esc(c.itemDescription)}」选择 ${c.choice}
+      <div class="muted">${esc(c.reason)}（当前 basis r${c.currentBasis}）</div>
+    </div>`).join('')}</div>`;
+}
+async function decide(ref, choice){
+  const id=$('sessionSel').value;
+  try {
+    await api(`/api/session/${id}/decide`, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({operatorId:$('operator').value||'anonymous', ref, choice, expectedBasis:localBasis})});
+    await loadSession();
+    toast(`已追加决定 ${choice}（不覆盖历史）`);
+  } catch(e){
+    toast(e.message, true);
+    if(e.status===409){ await loadSession(); }
+  }
+}
+function toggleBasisEdit(){
+  basisMode = !basisMode;
+  $('basisBtn').textContent = basisMode ? '退出基础修订' : '修订对齐基础';
+  $('basisBtn').className = basisMode ? 'warn' : 'ghost';
+  document.querySelectorAll('.tok').forEach(el=>{
+    el.onclick = basisMode ? ()=>pickToken(el.dataset.tid) : null;
+    el.style.cursor = basisMode ? 'crosshair' : 'default';
+  });
+  if(basisMode){ toast('基础修订模式：先点 A 侧 token，再点 B 侧 token 建立谱系链接（会推进 basis，旧决定进入重放）'); }
+  window._picked = [];
+}
+function pickToken(tid){
+  window._picked.push(tid);
+  if(window._picked.length===2){
+    const [l,r] = window._picked; window._picked=[];
+    doBasis('ADD_LINK', l, r, null);
+  }
+}
+async function doBasis(action, l, r, linkId){
+  const id=$('sessionSel').value;
+  try {
+    await api(`/api/session/${id}/basis`, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({operatorId:$('operator').value||'anonymous', action,
+        leftTokenId:l, rightTokenId:r, linkId, expectedBasis:localBasis})});
+    await loadSession(); toast('对齐基础已修订，旧决定进入重放判定');
+  } catch(e){ toast(e.message,true); if(e.status===409) await loadSession(); }
+}
+async function removeLink(linkId){
+  if(!confirm('删除该谱系链接？这会修订对齐基础（basis+1），旧决定进入重放。')) return;
+  await doBasis('REMOVE_LINK', null, null, linkId);
+}
+async function doMerge(){
+  const id=$('sessionSel').value;
+  try {
+    const r = await api(`/api/session/${id}/merge`, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({operatorId:$('operator').value||'anonymous', expectedBasis:localBasis})});
+    await loadSession();
+    const errs = r.validation.filter(f=>f.severity==='ERROR');
+    toast(`合并完成：${r.newVersionId}；未决 ${r.unresolved.length}，硬错误 ${errs.length}（不自动加根）`, errs.length);
+    showProvenance(r.newVersionId);
+  } catch(e){ toast('合并被拒：'+e.message,true); if(e.status===409) await loadSession(); }
+}
+function renderLogs(){
+  $('decisionLog').innerHTML = STATE.decisions.slice().reverse().map(d=>
+    `#${d.seq} [r${d.basisRevision}] ${esc(d.operatorId)} ${d.choice} ${esc(d.type)} :: ${esc(d.itemDescription)} <span style="opacity:.5">@${d.createdAt}</span>`
+  ).join('<br>') || '<span class="muted">（暂无决定）</span>';
+}
+async function renderRuns(){
+  const id=$('sessionSel').value;
+  const r = await api(`/api/runs/${id}`);
+  $('runsPanel').innerHTML = r.runs.length ? r.runs.map(x=>
+    `<div>合并 <b>${x.id}</b> → <a href="#" onclick="showProvenance('${x.newVersionId}');return false">${x.newVersionId}</a>
+      by ${esc(x.operatorId)} @r${x.basisRevision}；未决 ${x.unresolved.length}
+      <span class="muted">${esc(x.createdAt)}</span></div>`).join('') : '暂无合并。';
+  api(`/api/session/${id}/logs`).then(l=>{
+    $('eventLog').innerHTML = l.logs.map(x=>`${x.ts} ${esc(x.actor)} ${x.kind} ${esc(x.detail)}`).join('<br>');
+  });
+}
+async function showProvenance(versionId){
+  const p = await api(`/api/provenance/${versionId}`);
+  const row = (side,src,seq,extra)=>`<tr><td>${side}</td><td>${esc(src)}</td><td>${seq??'自动/—'}</td><td>${extra||''}</td></tr>`;
+  $('provPanel').innerHTML = `<h3>版本 ${versionId} 的逐条来源反查</h3>
+    <details open><summary>token 来源（${p.tokens.length}）</summary><table>
+      <tr><th>侧</th><th>源 token</th><th>决定#</th><th>属性侧</th></tr>
+      ${p.tokens.map(t=>row(t.selectedSide, `${t.sourceVersionId}: ${t.sourceTokenIds} → ${t.newTokenId}`, t.viaDecisionSeq, t.attrSide||'')).join('')}
+    </table></details>
+    <details><summary>依存弧来源（${p.deps.length}）</summary><table>
+      <tr><th>侧</th><th>源弧 → 新弧</th><th>决定#</th><th></th></tr>
+      ${p.deps.map(t=>row(t.selectedSide, `${t.sourceVersionId}: ${t.sourceDepId} → ${t.newDepId}`, t.viaDecisionSeq,'')).join('')}
+    </table></details>
+    <details><summary>成分来源（${p.constituents.length}）</summary><table>
+      <tr><th>侧</th><th>源成分 → 新成分</th><th>决定#</th><th></th></tr>
+      ${p.constituents.map(t=>row(t.selectedSide, `${t.sourceVersionId}: ${t.sourceConstituentId} → ${t.newConstituentId}`, t.viaDecisionSeq,'')).join('')}
+    </table></details>`;
+}
+async function exportData(){
+  const r = await fetch('/api/export');
+  const blob = await r.blob();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='arbitration-export.json'; a.click();
+  toast('运行记录已导出');
+}
+async function importData(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const text = await f.text();
+  const r = await fetch('/api/import', {method:'POST', headers:{'Content-Type':'application/json'}, body:text});
+  if(r.ok){ toast('已从导出文件恢复，可重新复核'); location.reload(); }
+  else { const b=await r.json(); toast('导入失败：'+b.message,true); }
+}
+async function resetAll(){
+  if(!confirm('清空数据库并重新导入固定 fixture？现有数据将删除。')) return;
+  await api('/api/reset',{method:'POST'}); location.reload();
+}
+boot();
+</script>
+</body>
+</html>
